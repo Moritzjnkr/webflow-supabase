@@ -145,9 +145,9 @@
 })({"9fECp":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "orderList", ()=>orderList);
+parcelHelpers.export(exports, "taskList", ()=>taskList);
 var _core = require("@xatom/core");
-var _auth = require("../auth"); // Import for potential future auth checks
+var _auth = require("../auth");
 var _supbase = require("../supbase");
 var _supbaseDefault = parcelHelpers.interopDefault(_supbase);
 const renderLogoutBtn = ()=>{
@@ -162,40 +162,117 @@ const renderLogoutBtn = ()=>{
     //changing create account text to logout text
     btn.setTextContent("Logout");
 };
-const orderList = ()=>{
+const taskList = ()=>{
     renderLogoutBtn();
-    // Get references to elements using xa-types (these must exist in your HTML)
-    const tableHeaders = new (0, _core.WFComponent)(`[xa-type="table-headers"]`);
-    const listContainer = new (0, _core.WFComponent)(`[xa-type="order-list"]`);
-    // Fetch the order data from Supabase
-    const fetchOrders = async ()=>{
-        try {
-            const { data, error } = await (0, _supbaseDefault.default).from("orders").select("*");
-            if (error) throw error;
-            renderOrders(data);
-        } catch (error) {
-            console.error("Error fetching orders:", error.message);
-        // Consider displaying an error message to the user here
-        }
+    const form = new (0, _core.WFFormComponent)(`[xa-type="task-list"]`);
+    let taskList = [];
+    const list = new (0, _core.WFDynamicList)(`[xa-type="list"]`, {
+        rowSelector: `[xa-type="item"]`,
+        emptySelector: `[xa-type="list-empty"]`,
+        loaderSelector: `[xa-type="list-loading"]`
+    });
+    let isLoading = true;
+    //fetching all items
+    const fetch = ()=>{
+        isLoading = true;
+        form.disableForm();
+        list.changeLoadingStatus(true);
+        (0, _supbaseDefault.default).from("Task").select().then((data)=>{
+            console.log(data);
+            form.enableForm();
+            //sorting items based on id.
+            taskList = data.data.sort((a, b)=>a.id - b.id);
+            list.changeLoadingStatus(false);
+            list.setData(taskList);
+            isLoading = false;
+        });
     };
-    // Function to render order data into the HTML
-    const renderOrders = (orders)=>{
-        listContainer.removeAllChildren(); // Clear previous content
-        for (const order of orders){
-            // Create a new row element for each order
-            const row = new (0, _core.WFComponent)(`<div xa-type="order-item"></div>`);
-            // Update text content within the row using xa-types
-            row.updateTextViaAttrVar({
-                "order-id": order.order_id,
-                "order-date": order.order_date,
-                "valuation-number": order.valuation_number,
-                "amount": order.amount
-            });
-            listContainer.appendChild(row);
-        }
+    //adding new task
+    const addTask = (task)=>{
+        isLoading = true;
+        form.disableForm();
+        list.changeLoadingStatus(true);
+        (0, _supbaseDefault.default).from("Task").insert({
+            task: task,
+            done: false,
+            email: (0, _auth.userAuth).getUser().email
+        }).then((data)=>{
+            if (data.error) {
+                form.enableForm();
+                alert(data.error.message || "Something went wrong!");
+                isLoading = false;
+                return;
+            }
+            form.resetForm();
+            fetch();
+        });
     };
-    // Initial fetch of order data when the page loads
-    fetchOrders();
+    //update task status
+    const changeTaskStatus = (taskId, status)=>{
+        isLoading = true;
+        form.disableForm();
+        list.changeLoadingStatus(true);
+        (0, _supbaseDefault.default).from("Task").update({
+            done: status
+        }).eq("id", taskId).eq("email", (0, _auth.userAuth).getUser().email).then((data)=>{
+            if (data.error) {
+                form.enableForm();
+                alert(data.error.message || "Something went wrong!");
+                isLoading = false;
+                return;
+            }
+            form.resetForm();
+            fetch();
+        });
+    };
+    //delete task
+    const deleteTask = (taskId)=>{
+        isLoading = true;
+        form.disableForm();
+        list.changeLoadingStatus(true);
+        (0, _supbaseDefault.default).from("Task").delete().eq("id", taskId).eq("email", (0, _auth.userAuth).getUser().email).then((data)=>{
+            if (data.error) {
+                form.enableForm();
+                alert(data.error.message || "Something went wrong!");
+                isLoading = false;
+                return;
+            }
+            form.resetForm();
+            fetch();
+        });
+    };
+    list.rowRenderer(({ rowData, rowElement })=>{
+        const { doneBtn, deleteBtn, taskText } = rowElement.getManyChildAsComponents({
+            doneBtn: "[xa-type=done]",
+            deleteBtn: "[xa-type=delete]",
+            taskText: `[xa-type=item-text]`
+        });
+        rowElement.updateTextViaAttrVar({
+            "task-text": rowData.task
+        });
+        if (rowData.done) {
+            doneBtn.addCssClass("active");
+            taskText.addCssClass("active");
+        } else {
+            doneBtn.removeCssClass("active");
+            taskText.removeCssClass("active");
+        }
+        doneBtn.on("click", ()=>{
+            if (isLoading) return;
+            changeTaskStatus(rowData.id, !rowData.done);
+        });
+        deleteBtn.on("click", ()=>{
+            if (isLoading) return;
+            deleteTask(rowData.id);
+        });
+        return rowElement;
+    });
+    list.setData([]);
+    form.onFormSubmit((data)=>{
+        if (!data.task || data.task.trim().length === 0) return;
+        addTask(data.task);
+    });
+    fetch();
 };
 
 },{"@xatom/core":"8w4K8","../auth":"du3Bh","../supbase":"anyOU","@parcel/transformer-js/src/esmodule-helpers.js":"5oERU"}]},[], null, "parcelRequire89a0")

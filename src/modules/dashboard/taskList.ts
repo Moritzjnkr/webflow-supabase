@@ -1,63 +1,184 @@
-import { WFComponent } from "@xatom/core";
-import { logout, userAuth } from "../auth"; // Import for potential future auth checks
-import supabase from "../supbase";
-
-const renderLogoutBtn = () => {
-  //logout button
-  const btn = new WFComponent(`[xa-type=cta-btn]`);
-  //on click setting up button text and calling logout function
-  btn.on("click", (e) => {
-    e.preventDefault();
-    btn.setTextContent("Please wait...");
-    logout();
-  });
-  //changing create account text to logout text
-  btn.setTextContent("Logout");
-};
-
-export const orderList = () => {
+import {
+    WFComponent,
+    WFDynamicList,
+    WFFormComponent,
+  } from "@xatom/core";
+  import { logout, userAuth } from "../auth";
+  import supabase from "../supbase";
+  
+  const renderLogoutBtn = () => {
+    //logout button
+    const btn = new WFComponent(`[xa-type=cta-btn]`);
+    //on click setting up button text and calling logout function
+    btn.on("click", (e) => {
+      e.preventDefault();
+      btn.setTextContent("Please wait...");
+      logout();
+    });
+    //changing create account text to logout text
+    btn.setTextContent("Logout");
+  };
+  export const taskList = () => {
     renderLogoutBtn();
-    // Get references to elements using xa-types (these must exist in your HTML)
-    const tableHeaders = new WFComponent(`[xa-type="table-headers"]`);
-    const listContainer = new WFComponent(`[xa-type="order-list"]`); 
-
-    // Fetch the order data from Supabase
-    const fetchOrders = async () => {
-        try {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("*"); 
-            
-            if (error) throw error; 
-
-            renderOrders(data);
-        } catch (error) {
-            console.error("Error fetching orders:", error.message);
-            // Consider displaying an error message to the user here
-        }
+    const form = new WFFormComponent<{ task: string }>(
+      `[xa-type="task-list"]`
+    );
+  
+    let taskList: {
+      id: number;
+      task: string;
+      done: boolean;
+      created_at: string;
+    }[] = [];
+  
+    const list = new WFDynamicList<(typeof taskList)[0]>(
+      `[xa-type="list"]`,
+      {
+        rowSelector: `[xa-type="item"]`,
+        emptySelector: `[xa-type="list-empty"]`,
+        loaderSelector: `[xa-type="list-loading"]`,
+      }
+    );
+    let isLoading = true;
+    //fetching all items
+    const fetch = () => {
+      isLoading = true;
+      form.disableForm();
+      list.changeLoadingStatus(true);
+      supabase
+        .from("Task")
+        .select()
+        .then((data) => {
+          console.log(data);
+          form.enableForm();
+          //sorting items based on id.
+          taskList = data.data.sort((a, b) => a.id - b.id);
+          list.changeLoadingStatus(false);
+          list.setData(taskList);
+          isLoading = false;
+        });
     };
-
-    // Function to render order data into the HTML
-    const renderOrders = (orders) => {
-        listContainer.removeAllChildren(); // Clear previous content
-
-        for (const order of orders) {
-            // Create a new row element for each order
-            const row = new WFComponent(`<div xa-type="order-item"></div>`);
-
-            // Update text content within the row using xa-types
-            row.updateTextViaAttrVar({
-                "order-id": order.order_id,
-                "order-date": order.order_date,
-                "valuation-number": order.valuation_number,
-                "amount": order.amount,
-                // ... (add other fields as needed)
-            });
-
-            listContainer.appendChild(row);
-        }
+    //adding new task
+    const addTask = (task: string) => {
+      isLoading = true;
+      form.disableForm();
+      list.changeLoadingStatus(true);
+      supabase
+        .from("Task")
+        .insert({
+          task: task,
+          done: false,
+          email: userAuth.getUser().email,
+        })
+        .then((data) => {
+          if (data.error) {
+            form.enableForm();
+            alert(
+              data.error.message || "Something went wrong!"
+            );
+            isLoading = false;
+  
+            return;
+          }
+          form.resetForm();
+          fetch();
+        });
     };
-
-    // Initial fetch of order data when the page loads
-    fetchOrders();
-};
+    //update task status
+    const changeTaskStatus = (
+      taskId: number,
+      status: boolean
+    ) => {
+      isLoading = true;
+      form.disableForm();
+      list.changeLoadingStatus(true);
+      supabase
+        .from("Task")
+        .update({
+          done: status,
+        })
+        .eq("id", taskId)
+        .eq("email", userAuth.getUser().email)
+        .then((data) => {
+          if (data.error) {
+            form.enableForm();
+            alert(
+              data.error.message || "Something went wrong!"
+            );
+            isLoading = false;
+            return;
+          }
+          form.resetForm();
+          fetch();
+        });
+    };
+    //delete task
+    const deleteTask = (taskId: number) => {
+      isLoading = true;
+      form.disableForm();
+      list.changeLoadingStatus(true);
+      supabase
+        .from("Task")
+        .delete()
+        .eq("id", taskId)
+        .eq("email", userAuth.getUser().email)
+        .then((data) => {
+          if (data.error) {
+            form.enableForm();
+            alert(
+              data.error.message || "Something went wrong!"
+            );
+            isLoading = false;
+            return;
+          }
+          form.resetForm();
+          fetch();
+        });
+    };
+  
+    list.rowRenderer(({ rowData, rowElement }) => {
+      const { doneBtn, deleteBtn, taskText } =
+        rowElement.getManyChildAsComponents({
+          doneBtn: "[xa-type=done]",
+          deleteBtn: "[xa-type=delete]",
+          taskText: `[xa-type=item-text]`,
+        });
+      rowElement.updateTextViaAttrVar({
+        "task-text": rowData.task,
+      });
+      if (rowData.done) {
+        doneBtn.addCssClass("active");
+        taskText.addCssClass("active");
+      } else {
+        doneBtn.removeCssClass("active");
+        taskText.removeCssClass("active");
+      }
+  
+      doneBtn.on("click", () => {
+        if (isLoading) {
+          return;
+        }
+        changeTaskStatus(rowData.id, !rowData.done);
+      });
+      deleteBtn.on("click", () => {
+        if (isLoading) {
+          return;
+        }
+        deleteTask(rowData.id);
+      });
+  
+      return rowElement;
+    });
+  
+    list.setData([]);
+  
+    form.onFormSubmit((data) => {
+      if (!data.task || data.task.trim().length === 0) {
+        return;
+      }
+  
+      addTask(data.task);
+    });
+  
+    fetch();
+  };
