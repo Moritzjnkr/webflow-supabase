@@ -177,7 +177,7 @@ const taskList = ()=>{
         isLoading = true;
         form.disableForm();
         list.changeLoadingStatus(true);
-        (0, _supbaseDefault.default).from("Task").select().then((data)=>{
+        (0, _supbaseDefault.default).from("todos").select().then((data)=>{
             console.log(data);
             form.enableForm();
             //sorting items based on id.
@@ -192,10 +192,10 @@ const taskList = ()=>{
         isLoading = true;
         form.disableForm();
         list.changeLoadingStatus(true);
-        (0, _supbaseDefault.default).from("Task").insert({
+        (0, _supbaseDefault.default).from("todos").insert({
             task: task,
             done: false,
-            email: (0, _auth.userAuth).getUser().email
+            user_id: (0, _auth.userAuth).getUser().id
         }).then((data)=>{
             if (data.error) {
                 form.enableForm();
@@ -212,9 +212,9 @@ const taskList = ()=>{
         isLoading = true;
         form.disableForm();
         list.changeLoadingStatus(true);
-        (0, _supbaseDefault.default).from("Task").update({
+        (0, _supbaseDefault.default).from("todos").update({
             done: status
-        }).eq("id", taskId).eq("email", (0, _auth.userAuth).getUser().email).then((data)=>{
+        }).eq("id", taskId).eq("user_id", (0, _auth.userAuth).getUser().id).then((data)=>{
             if (data.error) {
                 form.enableForm();
                 alert(data.error.message || "Something went wrong!");
@@ -230,7 +230,7 @@ const taskList = ()=>{
         isLoading = true;
         form.disableForm();
         list.changeLoadingStatus(true);
-        (0, _supbaseDefault.default).from("Task").delete().eq("id", taskId).eq("email", (0, _auth.userAuth).getUser().email).then((data)=>{
+        (0, _supbaseDefault.default).from("todos").delete().eq("id", taskId).eq("user_id", (0, _auth.userAuth).getUser().id).then((data)=>{
             if (data.error) {
                 form.enableForm();
                 alert(data.error.message || "Something went wrong!");

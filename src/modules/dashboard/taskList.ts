@@ -46,7 +46,7 @@ import {
       form.disableForm();
       list.changeLoadingStatus(true);
       supabase
-        .from("Task")
+        .from("todos")
         .select()
         .then((data) => {
           console.log(data);
@@ -64,11 +64,11 @@ import {
       form.disableForm();
       list.changeLoadingStatus(true);
       supabase
-        .from("Task")
+        .from("todos")
         .insert({
           task: task,
           done: false,
-          email: userAuth.getUser().email,
+          user_id: userAuth.getUser().id,
         })
         .then((data) => {
           if (data.error) {
@@ -93,12 +93,12 @@ import {
       form.disableForm();
       list.changeLoadingStatus(true);
       supabase
-        .from("Task")
+        .from("todos")
         .update({
           done: status,
         })
         .eq("id", taskId)
-        .eq("email", userAuth.getUser().email)
+        .eq("user_id", userAuth.getUser().id)
         .then((data) => {
           if (data.error) {
             form.enableForm();
@@ -118,10 +118,10 @@ import {
       form.disableForm();
       list.changeLoadingStatus(true);
       supabase
-        .from("Task")
+        .from("todos")
         .delete()
         .eq("id", taskId)
-        .eq("email", userAuth.getUser().email)
+        .eq("user_id", userAuth.getUser().id)
         .then((data) => {
           if (data.error) {
             form.enableForm();

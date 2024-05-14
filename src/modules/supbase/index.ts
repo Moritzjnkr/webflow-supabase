@@ -30,6 +30,7 @@ export const initSupabase = (cb: () => void) => {
     .then((data) => {
       if (!data.error && data.data && data.data.session) {
         setUser(
+          data.data.session.user.id,                // Pass the user ID from Supabase
           data.data.session.user.user_metadata.fullName,
           data.data.session.user.email
         );

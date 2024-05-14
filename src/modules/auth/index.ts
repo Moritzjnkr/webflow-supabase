@@ -9,6 +9,7 @@ import supabase from "../supbase";
 export const userAuth = new WFAuth<
   {
     fullName: string;
+    id: string;
     email: string;
   },
   "GUEST" | "USER",
@@ -19,10 +20,12 @@ export const userAuth = new WFAuth<
 userAuth.setRole("GUEST");
 
 export const setUser = (
+  id: string,
   fullName: string,
   email: string
 ) => {
   userAuth.setUser({
+    id,
     email,
     fullName,
   });
