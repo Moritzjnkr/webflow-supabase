@@ -1,5 +1,5 @@
 {
-  "webflowSubdomain": "svenskaguld",
+  "webflowSubdomain": "dashboard-d719cb",
   "port": 3000,
   "source": "./src/app.ts",
   "dist": "./dist",
