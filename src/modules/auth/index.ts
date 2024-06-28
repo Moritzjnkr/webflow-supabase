@@ -36,7 +36,7 @@ export const setUser = (
 export const logout = () => {
   supabase.auth.signOut().then(() => {
     userAuth.logout();
-    navigate("/");
+    navigate("/auth/sign-in");
   });
 };
 

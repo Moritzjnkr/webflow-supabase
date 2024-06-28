@@ -152,12 +152,12 @@ var _supbaseDefault = parcelHelpers.interopDefault(_supbase);
 const verify = ()=>{
     //since supabase handles verification for us we just have to listen login state
     (0, _supbaseDefault.default).auth.getSession().then((data)=>{
-        if (data.data && !data.error) (0, _core.navigate)("/dashboard/task-list");
+        if (data.data && !data.error) (0, _core.navigate)("/mina-sidor/forsaljningar");
         else {
             const { data } = (0, _supbaseDefault.default).auth.onAuthStateChange((event, session)=>{
                 console.log(event, session);
                 if (session) {
-                    (0, _core.navigate)("/dashboard/task-list");
+                    (0, _core.navigate)("/mina-sidor/forsaljningar");
                     data.subscription.unsubscribe();
                 }
             });

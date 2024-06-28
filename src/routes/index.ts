@@ -2,49 +2,60 @@ import { WFRoute, navigate } from "@xatom/core";
 import { userMiddleware } from "../modules/auth";
 
 export const app = () => {
-  //will trigger route matches /auth/*
+  // Handles all routes under /auth/*
   new WFRoute("/auth/(.*)")
     .withMiddleware(userMiddleware, "GUEST", "allow", {
       onError() {
-        navigate("/dashboard/task-list");
+        navigate("/mina-sidor/forsaljningar");  // Redirect to sign-in if there's an error in the auth route
       },
     })
     .execute(() => {
-      //will trigger route matches /auth/sign-up
+      // Route for signing up
       new WFRoute("/auth/sign-up").execute(() => {
-        //lazy loading route
         import("../modules/auth/signUp")
           .then(({ signUp }) => signUp())
           .catch(console.error);
       });
-      //will trigger route matches /auth/sign-in
+
+      // Route for signing in
       new WFRoute("/auth/sign-in").execute(() => {
-        //lazy loading route
         import("../modules/auth/signIn")
           .then(({ signIn }) => signIn())
           .catch(console.error);
       });
-      //will trigger route matches /auth/verify
+
+      // Route for verifying the magic link
       new WFRoute("/auth/verify").execute(() => {
-        //lazy loading route
         import("../modules/auth/verify")
-          .then(({ verify }) => verify())
-          .catch(console.error);
+          .then(({ verify }) => {
+            verify();
+            // Assume verification is handled internally, navigate after calling verify
+            navigate("/mina-sidor/forsaljningar");  // Redirect to dashboard after attempting verification
+          })
+          .catch((error) => {
+            console.error("Verification module failed to load", error);
+            navigate("/auth/sign-in");  // Fallback redirect to sign-in on error
+          });
       });
     });
-  //will trigger route matches /dashboard/*
-  new WFRoute("/dashboard/(.*)")
+
+  // Handles routes under /mina-sidor/*
+  new WFRoute("/mina-sidor/(.*)")
     .withMiddleware(userMiddleware, "USER", "allow", {
       onError() {
-        navigate("/auth/sign-in");
+        navigate("/auth/sign-in");  // Redirect to sign-in if user is not authenticated
       },
     })
     .execute(() => {
-      //will trigger route matches /dashboard/task-list
-      new WFRoute("/dashboard/task-list").execute(() => {
-        //lazy loading route
-        import("../modules/dashboard/taskList")
-          .then(({ taskList }) => taskList())
+      // Specific dashboard route handling
+      new WFRoute("/mina-sidor/forsaljningar").execute(() => {
+        import("../modules/order/orderDetail")
+          .then(({ orderDetails }) => orderDetails())
+          .catch(console.error);
+      });
+      new WFRoute("/mina-sidor/kunduppgifter").execute(() => {
+        import("../modules/customer/customer") // Adjust path as necessary
+          .then(({ customerDetails }) => customerDetails())
           .catch(console.error);
       });
     });

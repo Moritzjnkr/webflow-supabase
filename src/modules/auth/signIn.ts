@@ -3,18 +3,13 @@ import supabase from "../supbase";
 import { SUPABASE_REDIRECT_URL } from "../../config";
 
 export const signIn = () => {
-  //form
+  // Initialize the form component
   const form = new WFFormComponent<{
     email: string;
-    password: string;
   }>(`[xa-type=main-form]`);
-
-  //google login button
-  const googleBtn = form.getChildAsComponent(
-    `[xa-type="google-btn"]`
-  );
-
-  //on click trigger supabase oAuth provider
+/*
+  // Google login button handling
+  const googleBtn = form.getChildAsComponent(`[xa-type="google-btn"]`);
   googleBtn.on("click", () => {
     supabase.auth.signInWithOAuth({
       provider: "google",
@@ -23,45 +18,42 @@ export const signIn = () => {
       },
     });
   });
-
+*/
+  // Form submission for magic link
   form.onFormSubmit((data) => {
     form.showForm();
-
     form.disableForm();
-    form.updateSubmitButtonText("Please wait...");
+    form.updateSubmitButtonText("Sending Magic Link...");
 
-    supabase.auth
-      .signInWithPassword({
-        email: data.email,
-        password: data.password,
-      })
-      .then((data) => {
-        if (data.error) {
-          form.updateTextViaAttrVar({
-            error:
-              data.error.message ||
-              "Unable to login please try again",
-          });
-          form.showErrorState();
-          form.updateSubmitButtonText("Login");
-          return;
-        }
-
-        form.updateSubmitButtonText("Redirecting...");
-        navigate("/dashboard/task-list");
-      })
-      .catch((err) => {
+    // Call Supabase auth to send a magic link
+    supabase.auth.signInWithOtp({
+      email: data.email,
+      options: {
+        // Set to false if you do not want automatic sign-up
+        shouldCreateUser: false,
+        emailRedirectTo: SUPABASE_REDIRECT_URL,
+      },
+    }).then((response) => {
+      if (response.error) {
         form.updateTextViaAttrVar({
-          error:
-            err.message ||
-            "Unable to login please try again",
+          error: response.error.message || "Unable to send magic link, please try again",
         });
         form.showErrorState();
+        form.updateSubmitButtonText("Send Magic Link");
+        return;
+      }
 
-        form.updateSubmitButtonText("Login");
-      })
-      .finally(() => {
-        form.enableForm();
+      // Notify user to check their email for the magic link
+      form.updateSubmitButtonText("Check your email for the magic link");
+      navigate("/auth/check-email"); // Redirect to a check email page or similar
+    }).catch((err) => {
+      form.updateTextViaAttrVar({
+        error: err.message || "Unable to send magic link, please try again",
       });
+      form.showErrorState();
+      form.updateSubmitButtonText("Send Magic Link");
+    }).finally(() => {
+      form.enableForm();
+    });
   });
 };

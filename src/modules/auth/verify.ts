@@ -7,13 +7,13 @@ export const verify = () => {
     .getSession()
     .then((data) => {
       if (data.data && !data.error) {
-        navigate("/dashboard/task-list");
+        navigate("/mina-sidor/forsaljningar");
       } else {
         const { data } = supabase.auth.onAuthStateChange(
           (event, session) => {
             console.log(event, session);
             if (session) {
-              navigate("/dashboard/task-list");
+              navigate("/mina-sidor/forsaljningar");
               data.subscription.unsubscribe();
             }
           }

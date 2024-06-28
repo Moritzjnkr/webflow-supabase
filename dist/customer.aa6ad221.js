@@ -142,71 +142,64 @@
       this[globalName] = mainExports;
     }
   }
-})({"cbLdP":[function(require,module,exports) {
+})({"bPNs5":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "signIn", ()=>signIn);
+parcelHelpers.export(exports, "customerDetails", ()=>customerDetails);
 var _core = require("@xatom/core");
+var _auth = require("../auth");
 var _supbase = require("../supbase");
 var _supbaseDefault = parcelHelpers.interopDefault(_supbase);
-var _config = require("../../config");
-const signIn = ()=>{
-    // Initialize the form component
-    const form = new (0, _core.WFFormComponent)(`[xa-type=main-form]`);
-    /*
-  // Google login button handling
-  const googleBtn = form.getChildAsComponent(`[xa-type="google-btn"]`);
-  googleBtn.on("click", () => {
-    supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: SUPABASE_REDIRECT_URL,
-      },
+const renderLogoutBtn = ()=>{
+    //logout button
+    const btn = new (0, _core.WFComponent)(`[xa-type=cta-btn]`);
+    //on click setting up button text and calling logout function
+    btn.on("click", (e)=>{
+        e.preventDefault();
+        btn.setTextContent("Please wait...");
+        (0, _auth.logout)();
     });
-  });
-*/ // Form submission for magic link
-    form.onFormSubmit((data)=>{
-        form.showForm();
-        form.disableForm();
-        form.updateSubmitButtonText("Sending Magic Link...");
-        // Call Supabase auth to send a magic link
-        (0, _supbaseDefault.default).auth.signInWithOtp({
-            email: data.email,
-            options: {
-                // Set to false if you do not want automatic sign-up
-                shouldCreateUser: false,
-                emailRedirectTo: (0, _config.SUPABASE_REDIRECT_URL)
-            }
-        }).then((response)=>{
-            if (response.error) {
-                form.updateTextViaAttrVar({
-                    error: response.error.message || "Unable to send magic link, please try again"
-                });
-                form.showErrorState();
-                form.updateSubmitButtonText("Send Magic Link");
-                return;
-            }
-            // Notify user to check their email for the magic link
-            form.updateSubmitButtonText("Check your email for the magic link");
-            (0, _core.navigate)("/auth/check-email"); // Redirect to a check email page or similar
-        }).catch((err)=>{
-            form.updateTextViaAttrVar({
-                error: err.message || "Unable to send magic link, please try again"
-            });
-            form.showErrorState();
-            form.updateSubmitButtonText("Send Magic Link");
-        }).finally(()=>{
-            form.enableForm();
-        });
-    });
+    //changing create account text to logout text
+    btn.setTextContent("Logga ut");
 };
+const customerDetails = async ()=>{
+    renderLogoutBtn();
+    const userId = (0, _auth.userAuth).getUser().id;
+    const customerDetailsContainer = new (0, _core.WFComponent)(`[xa-type="customer-details"]`);
+    let customer = null;
+    // Fetch and Render Order Details (Combined)
+    try {
+        const { data, error } = await (0, _supbaseDefault.default).from("Customer").select("*").eq("user_id", userId).single();
+        if (error || !data) {
+            customerDetailsContainer.setHTML("<p>No active order found.</p>");
+            return;
+        }
+        customer = data;
+        // Update Text Content using a similar approach to the working code
+        const { firstname, lastname, adress, postalcode, postalort, uppgiftemail, uppgiftphone } = customerDetailsContainer.getManyChildAsComponents({
+            firstname: "[xa-type=firstname]",
+            lastname: "[xa-type=lastname]",
+            adress: "[xa-type=adress]",
+            postalcode: "[xa-type=postalcode]",
+            postalort: "[xa-type=postalort]",
+            uppgiftemail: "[xa-type=uppgiftemail]",
+            uppgiftphone: "[xa-type=uppgiftphone]"
+        });
+        //Update inner text of the elements
+        firstname.setTextContent(customer.First_name);
+        lastname.setTextContent(customer.Last_name);
+        adress.setTextContent(customer.gatuadress);
+        postalcode.setTextContent(customer.postnummer);
+        postalort.setTextContent(customer.postort);
+        uppgiftemail.setTextContent(customer.email);
+        uppgiftphone.setTextContent(customer.phone);
+    } catch (error) {
+        console.error("Error fetching order details or status:", error);
+    // Handle error appropriately
+    }
+};
+customerDetails();
 
-},{"@xatom/core":"8w4K8","../supbase":"anyOU","../../config":"in6u0","@parcel/transformer-js/src/esmodule-helpers.js":"5oERU"}],"in6u0":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "SUPABASE_REDIRECT_URL", ()=>SUPABASE_REDIRECT_URL);
-const SUPABASE_REDIRECT_URL = `${location.protocol}//${location.host}/auth/verify`;
+},{"@xatom/core":"8w4K8","../auth":"du3Bh","../supbase":"anyOU","@parcel/transformer-js/src/esmodule-helpers.js":"5oERU"}]},[], null, "parcelRequire89a0")
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"5oERU"}]},[], null, "parcelRequire89a0")
-
-//# sourceMappingURL=signIn.e51c192a.js.map
+//# sourceMappingURL=customer.aa6ad221.js.map

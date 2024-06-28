@@ -16,7 +16,7 @@ import {
       logout();
     });
     //changing create account text to logout text
-    btn.setTextContent("Logout");
+    btn.setTextContent("Logga ut");
   };
   export const taskList = () => {
     renderLogoutBtn();
