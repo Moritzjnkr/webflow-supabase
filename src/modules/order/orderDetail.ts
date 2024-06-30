@@ -71,9 +71,9 @@ export const orderDetails = async () => {
     bestallning.setTextContent(order.barcodeid.toFixed(0));
     datum.setTextContent(order.order_date);
     varderingsnummer.setTextContent(order.valuation_number);
-    summa.setTextContent(order.amount.toFixed(2));
+    summa.setTextContent(order.amount != null ? order.amount.toFixed(2) : "0.00");
     angeratt.setTextContent(order.cancellation_right_period);
-    totalgrampurchased.setTextContent(order.total_gram_purchased.toFixed(2));
+    totalgrampurchased.setTextContent(order.total_gram_purchased != null ? order.total_gram_purchased.toFixed(2) : "0.00");
     kvittolink.setAttribute("href", order.recipe_download_link);
 
     const { data: statusData, error: statusError } = await supabase
