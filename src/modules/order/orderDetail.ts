@@ -148,9 +148,9 @@ export const orderDetails = async () => {
         components.bestallning.setTextContent(order.barcodeid.toFixed(0));
         components.datum.setTextContent(order.order_date);
         components.varderingsnummer.setTextContent(order.valuation_number);
-        components.summa.setTextContent(order.amount != null ? order.amount.toFixed(2) : "0.00");
+        components.summa.setTextContent(order.amount || "0.00");
         components.angeratt.setTextContent(order.cancellation_right_period);
-        components.totalgrampurchased.setTextContent(order.total_gram_purchased != null ? order.total_gram_purchased.toFixed(2) : "0.00");
+        components.totalgrampurchased.setTextContent(order.total_gram_purchased || "0.00");
         components.kvittolink.setAttribute("href", order.recipe_download_link);
     } else {
         console.error("One or more components not found in order details container", components);
