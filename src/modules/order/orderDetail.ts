@@ -1,63 +1,140 @@
-import { WFComponent } from "@xatom/core";
+import { WFComponent, WFDynamicList } from "@xatom/core";
 import { logout, userAuth } from "../auth";
 import supabase from "../supbase";
 
-const renderLogoutBtn = () => {
-  //logout button
-  const btn = new WFComponent(`[xa-type=cta-btn]`);
-  //on click setting up button text and calling logout function
-  btn.on("click", (e) => {
-    e.preventDefault();
-    btn.setTextContent("Please wait...");
-    logout();
-  });
-  //changing create account text to logout text
-  btn.setTextContent("Logga ut");
-};
-
-// Order Interface (Modify types as needed)
 interface Order {
-  id: string;
-  user_id: string;
-  order_id: string;
-  is_complete: boolean;
-  order_date: string;
-  valuation_number: string;
-  amount: number;
-  cancellation_right_period: string;
-  total_gram_purchased: number;
-  recipe_download_link: string;
-  barcodeid: number;
+    id: string;
+    user_id: string;
+    order_id: string;
+    is_complete: boolean;
+    order_date: string;
+    valuation_number: string;
+    amount: number | null;
+    cancellation_right_period: string;
+    total_gram_purchased: number;
+    recipe_download_link: string;
+    barcodeid: number;
 }
 
+const renderLogoutBtn = () => {
+    const btn = new WFComponent(`[xa-type=cta-btn]`);
+    btn.on("click", (e) => {
+        e.preventDefault();
+        btn.setTextContent("Please wait...");
+        logout();
+    });
+    btn.setTextContent("Logga ut");
+};
+
+const renderHistory = async () => {
+    const historyContainer = new WFDynamicList<Order>("[xa-type='history-list']", {
+        rowSelector: "[xa-type='history-item']",
+        emptySelector: "[xa-type='no-previous-order']"
+    });
+
+    historyContainer.rowRenderer(({ rowData, rowElement }) => {
+        if (!rowData || !rowElement) {
+            console.error("Row data or element is missing", rowData, rowElement);
+            return rowElement; // Return the row element to maintain the structure
+        }
+
+        console.log("Rendering row with data", rowData);
+
+        const vardNrComponent = rowElement.getChildAsComponent("[xa-type='history-vard-nr']");
+        const beloppComponent = rowElement.getChildAsComponent("[xa-type='history-belopp']");
+
+        if (vardNrComponent && beloppComponent) {
+            vardNrComponent.setTextContent(rowData.valuation_number);
+            const amountText = rowData.amount != null ? rowData.amount.toFixed(2) + ' SEK' : "0.00 SEK";
+            beloppComponent.setTextContent(amountText);
+        } else {
+            console.error("One or more components not found in row element", vardNrComponent, beloppComponent);
+        }
+
+        return rowElement;
+    });
+
+    try {
+        const { data: historyData, error } = await supabase
+            .from("Order")
+            .select("*")
+            .eq("user_id", userAuth.getUser().id)
+            .eq("is_complete", true)
+            .order("order_date", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching order history:", error);
+            return;
+        }
+
+        console.log("Setting data for history", historyData);
+        historyContainer.setData(historyData || []);
+    } catch (error) {
+        console.error("Failed to fetch or render order history:", error);
+    }
+};
+
+const fetchLatestIncompleteOrder = async (userId: string) => {
+    try {
+        const { data: order, error } = await supabase
+            .from("Order")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("is_complete", false)
+            .order("order_date", { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error || !order) {
+            console.error("Error fetching latest incomplete order or no such order exists", error);
+            return null;
+        }
+
+        console.log("Fetched latest incomplete order", order);
+        return order;
+    } catch (error) {
+        console.error("Error fetching latest incomplete order:", error);
+        return null;
+    }
+};
+
+const fetchOrderStatus = async (orderId: string) => {
+    try {
+        const { data: statusData, error: statusError } = await supabase
+            .from("order_status")
+            .select("*")
+            .eq("order_id", orderId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+        if (statusError) {
+            console.error("Error fetching order status:", statusError);
+            return null;
+        }
+
+        console.log("Fetched latest order status", statusData);
+        return statusData;
+    } catch (error) {
+        console.error("Error fetching order status:", error);
+        return null;
+    }
+};
+
 export const orderDetails = async () => {
-  renderLogoutBtn(); 
-  
-  const userId = userAuth.getUser().id;
-  const orderDetailsContainer = new WFComponent(`[xa-type="order-details"]`);
+    renderLogoutBtn();
+    renderHistory();  // Call to render history of completed orders
 
-  let order: Order | null = null;
+    const userId = userAuth.getUser().id;
+    const orderDetailsContainer = new WFComponent(`[xa-type="order-details"]`);
 
-  // Fetch and Render Order Details (Combined)
-  try {
-    const { data, error } = await supabase
-      .from("Order")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("is_complete", false) 
-      .single();
-
-    if (error || !data) {
-      orderDetailsContainer.setHTML("<p>No active order found.</p>");
-      return;
+    const order = await fetchLatestIncompleteOrder(userId);
+    if (!order) {
+        orderDetailsContainer.setHTML("<p>No active order found.</p>");
+        return;
     }
 
-    order = data as Order; 
-
-    
-    // Update Text Content using a similar approach to the working code
-    const { bestallning, datum, varderingsnummer, summa, angeratt, totalgrampurchased, kvittolink} = 
-        orderDetailsContainer.getManyChildAsComponents({
+    const components = orderDetailsContainer.getManyChildAsComponents({
         kvittolink: "[xa-type=pdf-link]",
         bestallning: "[xa-type=bestallning]",
         datum: "[xa-type=datum]",
@@ -66,63 +143,49 @@ export const orderDetails = async () => {
         angeratt: "[xa-type=angerrätt]",
         totalgrampurchased: "[xa-type=totalgrampurchased]",
     });
-    
-    //Update inner text of the elements
-    bestallning.setTextContent(order.barcodeid.toFixed(0));
-    datum.setTextContent(order.order_date);
-    varderingsnummer.setTextContent(order.valuation_number);
-    summa.setTextContent(order.amount != null ? order.amount.toFixed(2) : "0.00");
-    angeratt.setTextContent(order.cancellation_right_period);
-    totalgrampurchased.setTextContent(order.total_gram_purchased != null ? order.total_gram_purchased.toFixed(2) : "0.00");
-    kvittolink.setAttribute("href", order.recipe_download_link);
 
-    const { data: statusData, error: statusError } = await supabase
-    .from("order_status")
-    .select("*")
-    .eq("order_id", order.id)  // Filter by the Order's id (primary key)
-    .order("created_at", { ascending: false }) // Get the latest status
-    .single();
+    if (components.bestallning && components.datum && components.varderingsnummer && components.summa && components.angeratt && components.totalgrampurchased && components.kvittolink) {
+        components.bestallning.setTextContent(order.barcodeid.toFixed(0));
+        components.datum.setTextContent(order.order_date);
+        components.varderingsnummer.setTextContent(order.valuation_number);
+        components.summa.setTextContent(order.amount != null ? order.amount.toFixed(2) : "0.00");
+        components.angeratt.setTextContent(order.cancellation_right_period);
+        components.totalgrampurchased.setTextContent(order.total_gram_purchased != null ? order.total_gram_purchased.toFixed(2) : "0.00");
+        components.kvittolink.setAttribute("href", order.recipe_download_link);
+    } else {
+        console.error("One or more components not found in order details container", components);
+        return;
+    }
 
-      if (statusError) {
-          console.error("Error fetching order status:", statusError);
-          return;
-      }
+    const statusData = await fetchOrderStatus(order.id);
+    if (!statusData) return;
 
-      const formatDateTime = (isoString) => {
+    const formatDateTime = (isoString) => {
         const date = new Date(isoString);
         const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is zero-based
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
         const hours = date.getHours().toString().padStart(2, '0');
         const minutes = date.getMinutes().toString().padStart(2, '0');
-    
+
         return `${day}.${month}.${year} ${hours}:${minutes}`;
     };
 
-      const step = statusData.step || 1;
-      const substep = statusData.substep || 1;
-      const kuvertMottagen = statusData.kuvert_mottagen ? formatDateTime(statusData.kuvert_mottagen) : "Not available";
+    const step = statusData.step || 1;
+    const substep = statusData.substep || 1;
+    const kuvertMottagen = statusData.kuvert_mottagen ? formatDateTime(statusData.kuvert_mottagen) : "Not available";
 
-      // Update elements with the step and substep information
-      const stepElement = new WFComponent(`[xa-type="step"]`);
-      stepElement.setTextContent(`${step}`);
+    const stepElement = new WFComponent(`[xa-type="step"]`);
+    const substepElement = new WFComponent(`[xa-type="substep"]`);
+    const kuvertMottagenElement = new WFComponent(`[xa-type="kuvertmottagen"]`);
 
-      const substepElement = new WFComponent(`[xa-type="substep"]`);
-      substepElement.setTextContent(`${substep}`);
-
-      // Update the kuvert_mottagen element with the date
-      const kuvertMottagenElement = new WFComponent(`[xa-type="kuvertmottagen"]`);
-      kuvertMottagenElement.setTextContent(kuvertMottagen);
-
-  } catch (error) {
-    console.error("Error fetching order details or status:", error);
-    // Handle error appropriately
-  }
-
-      
-
-
-  
+    if (stepElement && substepElement && kuvertMottagenElement) {
+        stepElement.setTextContent(`${step}`);
+        substepElement.setTextContent(`${substep}`);
+        kuvertMottagenElement.setTextContent(kuvertMottagen);
+    } else {
+        console.error("One or more step-related components not found", { stepElement, substepElement, kuvertMottagenElement });
+    }
 };
 
 orderDetails();
