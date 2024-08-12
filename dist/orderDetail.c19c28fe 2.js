@@ -173,10 +173,8 @@ const renderHistory = async ()=>{
         const vardNrComponent = rowElement.getChildAsComponent("[xa-type='history-vard-nr']");
         const beloppComponent = rowElement.getChildAsComponent("[xa-type='history-belopp']");
         if (vardNrComponent && beloppComponent) {
-            vardNrComponent.setTextContent(rowData.valuation_number || "N/A");
-            // Convert amount to number if it's a string, and then apply toFixed
-            const amount = typeof rowData.amount === "string" ? parseFloat(rowData.amount) : rowData.amount;
-            const amountText = amount != null && !isNaN(amount) ? amount.toFixed(2) + " SEK" : "0.00 SEK";
+            vardNrComponent.setTextContent(rowData.valuation_number);
+            const amountText = rowData.amount != null ? rowData.amount.toFixed(2) + " SEK" : "0.00 SEK";
             beloppComponent.setTextContent(amountText);
         } else console.error("One or more components not found in row element", vardNrComponent, beloppComponent);
         return rowElement;
@@ -250,9 +248,9 @@ const orderDetails = async ()=>{
         components.bestallning.setTextContent(order.barcodeid.toFixed(0));
         components.datum.setTextContent(order.order_date);
         components.varderingsnummer.setTextContent(order.valuation_number);
-        components.summa.setTextContent(order.amount || "0.00");
+        components.summa.setTextContent(order.amount != null ? order.amount.toFixed(2) : "0.00");
         components.angeratt.setTextContent(order.cancellation_right_period);
-        components.totalgrampurchased.setTextContent(order.total_gram_purchased || "0.00");
+        components.totalgrampurchased.setTextContent(order.total_gram_purchased != null ? order.total_gram_purchased.toFixed(2) : "0.00");
         components.kvittolink.setAttribute("href", order.recipe_download_link);
     } else {
         console.error("One or more components not found in order details container", components);

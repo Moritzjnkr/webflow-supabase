@@ -9,9 +9,9 @@ interface Order {
     is_complete: boolean;
     order_date: string;
     valuation_number: string;
-    amount: number | null;
+    amount: string | number | null;
     cancellation_right_period: string;
-    total_gram_purchased: number;
+    total_gram_purchased: string | number | null;
     recipe_download_link: string;
     barcodeid: number;
 }
@@ -44,8 +44,11 @@ const renderHistory = async () => {
         const beloppComponent = rowElement.getChildAsComponent("[xa-type='history-belopp']");
 
         if (vardNrComponent && beloppComponent) {
-            vardNrComponent.setTextContent(rowData.valuation_number);
-            const amountText = rowData.amount != null ? rowData.amount.toFixed(2) + ' SEK' : "0.00 SEK";
+            vardNrComponent.setTextContent(rowData.valuation_number || "N/A");
+    
+            // Convert amount to number if it's a string, and then apply toFixed
+            const amount = typeof rowData.amount === "string" ? parseFloat(rowData.amount) : rowData.amount;
+            const amountText = amount != null && !isNaN(amount) ? amount.toFixed(2) + ' SEK' : "0.00 SEK";
             beloppComponent.setTextContent(amountText);
         } else {
             console.error("One or more components not found in row element", vardNrComponent, beloppComponent);
